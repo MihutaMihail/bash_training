@@ -1,0 +1,53 @@
+#!/bin/bash
+
+function affiche_attrib() {
+	dir_level=$2
+	
+	for file in "$1"/*; do
+		if [ -f "$file" ]; then
+		
+			# reset tabs for each file			
+			tabs=	
+	
+			# generate tab spaces
+			for ((i=0;i<$dir_level;i++)); do
+				tabs+="$(printf '\t')"
+			done
+
+			# path
+			echo "${tabs}Chemin : $(stat --format=%n "$file")"
+			# owner
+			echo "${tabs}Propriétaire :" $(stat --format=%U "$file")
+			# rights
+			echo "${tabs}Droits :" $(stat --format=%A "$file")
+			# size
+			echo "${tabs}Taille :" $(stat --format=%s "$file")
+			# type
+			echo "${tabs}Type :" $(stat --format=%F "$file")
+			#	last access
+			echo "${tabs}time of last access :" $(stat --format=%x "$file")
+			
+			# empty line
+			echo ""
+		elif [ -d "$file" ]; then
+			((dir_level++))
+			affiche_attrib "$file" "$dir_level"
+			((dir_level--))
+		fi
+	done
+}
+
+function check_paths() {
+	if [ ! -e "$1" ]; then
+		echo "Chemin non valide"
+		exit 1
+	fi
+}
+
+if [ $# -eq 1 ]; then
+	check_paths "$1"
+	affiche_attrib "$1" 0
+else
+	echo "Vous devez passer un seul argument"
+	exit 1
+fi

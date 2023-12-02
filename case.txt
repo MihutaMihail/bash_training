@@ -1,0 +1,33 @@
+#!/bin/bash
+
+# Variables
+nbArguments=$#
+name=$1
+
+if [ $nbArguments -ne 1 ]; then
+	echo "Passez 1 argument"
+	exit 1
+fi
+
+case $name in
+	a*)
+		echo "Le nom commence par a"
+		exit 0
+	;;
+	[A-Z]*)
+		echo "Débute par une majuscule"
+		exit 0
+	;;
+	*[0-9])
+		echo "Termine par un chiffre"
+		exit 
+	;;
+	*[0-9]*)
+		echo "Contient un chiffre"
+		exit 0
+	;;
+	*)
+		echo "Le nom ne respecte aucun cas"
+	;;
+esac
+

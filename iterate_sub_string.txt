@@ -1,0 +1,11 @@
+#!/bin/bash
+
+string="B2 Cours Shell"
+
+# Access by sub string
+
+for ((i = 0; i < ${#string}; i++))
+do
+	char="${string:$i:1}"
+	echo "Position $i : $char"
+done

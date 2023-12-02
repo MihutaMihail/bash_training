@@ -1,0 +1,76 @@
+#!/bin/bash
+
+# global variables
+parent_dir="Exercise_Shell"
+nb_dir=$1
+
+# create dir tree based on an argument (int)
+function creat_arbo() {
+
+	# create parent dir
+	mkdir $parent_dir
+	cd $parent_dir/
+
+	# create sub dir
+	for i in $(seq 1 $nb_dir)
+	do
+		mkdir "rep-$i"
+	done
+	
+	# specific instructions in rep-1
+	cd rep-1/
+
+	# with_SUID file
+	touch with_SUID
+	chmod u+xs with_SUID
+
+	# with_SGID file
+	touch with_SGID
+	chmod g+xs with_SGID
+
+	cd ..
+
+	# specific instructions in rep-2
+	cd rep-2/
+
+	# facture_privée file
+	touch facture_privée
+	chmod u+rw,g-rw,o-rw facture_privée
+
+	# file_shared file
+	touch file_shared
+	chmod a+rw file_shared
+
+	# return back to original dir
+	cd ..
+	cd ..
+}
+
+# display all files rights inside given argument (dir)
+function affiche_arbo() {
+	
+	# show rights for each file inside dir
+	for file in $1/*
+	do
+		ls -l $file
+	done
+}
+
+# remove dir based on argument (dir)
+function clear_arbo() {
+	rm -r $1/
+}
+
+if [ ! -z $nb_dir ] && [ $# == 1 ]; then
+	if [[ $nb_dir =~ ^[2-4]$ ]]; then
+		creat_arbo $nb_dir
+		affiche_arbo $parent_dir
+		clear_arbo $parent_dir	
+	else
+		echo "Passez un nombre entre 2 et 4"
+		exit 1
+	fi
+else
+	echo "Vous devez passer un seul argument"
+	exit 1
+fi

@@ -1,0 +1,13 @@
+#!/bin/bash
+
+tab=(B1 B2 B3 M1 M2)
+index=0
+
+while [ $index -lt ${#tab[*]} ]
+do
+	echo "Classe : ${tab[$index]}"
+
+	#double () are mandatory
+	#if single (), bash will take that as a command
+	index=$(($index + 1))
+done
