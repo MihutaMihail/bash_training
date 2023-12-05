@@ -1,0 +1,227 @@
+#!/bin/bash
+
+function parcours_dir() {
+	dir_level=$2
+
+	for file in "$1"/*; do
+		if [ -f "$file" ]; then
+			change_droits "$file"
+		fi
+
+		# reset tabs for each file			
+		tabs=	
+	
+		# generate tab spaces
+		for ((i=0;i<$dir_level;i++)); do
+			tabs+="$(printf '\t')"
+		done
+
+		# path
+		echo "${tabs}Dossier : $(dirname $(realpath "$file"))"
+
+		# extended rights
+		extended_rights=$(file_or_dir_extended_rights "$file")
+		echo "${tabs}$extended_rights"
+
+		# owner
+		echo "${tabs}Nom Propriétaire :" $(stat --format=%U "$file")
+
+		# rights
+		get_file_rights_text_format "$file" "${tabs}"
+
+		# empty line
+		echo ""
+		
+		if [ -d "$file" ]; then
+			((dir_level++))
+			parcours_dir "$file" "$dir_level"
+			((dir_level--))
+		fi
+	done
+}
+
+function change_droits() {
+	file=$1
+	execute_owner_right=false
+	execute_other_right=false
+	execute_group_right=false
+
+	for ((i = 0; i < ${#rights_file}; i++)); do
+		char="${rights_file:$i:1}"
+
+		if [ $i -ge 1 ] && [ $i -le 3 ]; then
+			if [ -x "$file" ]; then
+				execute_owner_right=true
+			fi	
+		elif [ $i -ge 7 ] && [ $i -le 9 ]; then
+			if [ -x "$file" ]; then
+				execute_other_right=true
+			fi
+		fi
+
+		if [ $i -ge 4 ] && [ $i -le 6 ]; then
+			if [ -x "$file" ]; then
+				execute_group_right=true
+			fi
+		fi
+	done
+	
+	# add SUID or SGID
+	if [ "$execute_owner_right" == true ] && [ "$execute_other_right" == true ]; then
+		chmod u+s "$file"
+	elif [ "$execute_group_right" == true ] && [ "$execute_owner_right" == true ]; then
+		chmod g+s "$file"
+	fi		
+}
+
+function get_file_rights_text_format() {
+	file=$1
+	tabs=$2
+
+	owner_rights_text="Droits Propriétaire : "
+	group_rights_text="Droits Groupe : "
+	other_rights_text="Droits autres : "
+	rights_file=$(stat --format=%A "$file")
+
+	# iterate through every char in rights
+	for ((i = 0; i < ${#rights_file}; i++)); do
+		char="${rights_file:$i:1}"
+
+		# 1-3 = owner
+		# 4-6 = group
+		# 7-9 = other
+
+		# Check for standard rights
+		if [ $char == "r" ]; then
+			if [ $i -ge 1 ] && [ $i -le 3 ]; then
+				owner_rights_text+="Lecture"
+			elif [ $i -ge 4 ] && [ $i  -le 6 ]; then
+				group_rights_text+="Lecture"
+			elif [ $i -ge 7 ] && [ $i -le 9 ]; then
+				other_rights_text+="Lecture"
+			fi 
+		elif [ $char == "w" ]; then
+			if [ $i -ge 1 ] && [ $i -le 3 ]; then
+				owner_rights_text+=", Ecriture"
+			elif [ $i -ge 4 ] && [ $i  -le 6 ]; then
+				group_rights_text+=", Ecriture"
+			elif [ $i -ge 7 ] && [ $i -le 9 ]; then
+				other_rights_text+=", Ecriture"
+			fi 
+		elif [ $char == "x" ]; then
+			if [ $i -ge 1 ] && [ $i -le 3 ]; then
+				owner_rights_text+=", Exécution"
+			elif [ $i -ge 4 ] && [ $i  -le 6 ]; then
+				group_rights_text+=", Exécution"
+			elif [ $i -ge 7 ] && [ $i -le 9 ]; then
+				other_rights_text+=", Exécution"
+			fi 
+		fi
+	done
+
+	# Check for SUID
+  if [ -u "$file" ]; then
+    owner_rights_text+=", [SUID]"
+  fi
+
+	# Check for SGID
+  if [ -g "$file" ]; then
+    group_rights_text+=", [SGID]"
+  fi
+
+	# Check for STICKY
+  if [ -k "$file" ]; then
+    other_rights_text+=", [STICKY]"
+  fi
+		
+	echo "${tabs}$owner_rights_text"
+	echo "${tabs}$group_rights_text"
+	echo "${tabs}$other_rights_text"
+}
+
+function file_or_dir_extended_rights() {
+	file=$1
+	return_string=	
+
+	if [ -f "$file" ]; then
+		
+		# add file name
+		return_string+="Fichier : $(basename $(stat --format=%n "$file")) "	
+
+		# check for SUID or SGID
+		if [ -u "$file" ]; then
+			return_string+="(Ce fichier possède un droit SUID)"
+		elif [ -g "$file" ]; then
+			return_string+="(Ce fichier possède un droit SGID)"
+		fi	
+	elif [ -d "$file" ]; then
+		
+		# add comment
+		return_string+="Commentaire : "
+
+		if [ -k "$file" ]; then
+			return_string+="Seul le propriétaire d'un fichier peux supprimer son fichier dans ce dossier"
+		else
+			return_string+="Tout le monde peut supprimer les fichiers dans ce dossier"
+		fi
+	fi
+
+	echo $return_string
+}
+
+function create_arbo() {
+	mkdir "D_EXO_6"
+	cd "D_EXO_6"
+	touch "F_Notes"
+	chmod u=rw,g=,o= F_Notes
+
+	mkdir "D_Perso"
+	cd "D_Perso/"
+
+	mkdir "D_Facture"
+	cd "D_Facture/"
+	touch "F_Facture1"
+	chmod u=rw,g=r,o=r F_Facture1
+	cd ..
+
+	mkdir "D_Confi"
+	cd "D_Confi/"
+	touch "clé"
+	chmod u=rw,g=,o= clé
+	cd ..
+	cd ..
+
+	mkdir "D_Bin"
+	cd "D_Bin/"
+	touch "F_With_SGID"
+	chmod u=rwx,g=xs,o=r F_With_SGID
+	touch "F_With_SUID"
+	chmod u=rwxs,g=r,o=x F_With_SUID
+	cd ..
+
+	mkdir "D_Partage"
+	chmod u=rwx,g=rwx,o=rxt D_Partage
+	cd "D_Partage/"
+	touch "F_Projet"
+	chmod u=rwx,g=rw,o=r F_Projet
+	mkdir "D_B2"
+	cd "D_B2/"
+	touch "F_Prog"
+	chmod u=rwx,g=r,o=x F_Prog
+	cd ..
+	cd ..
+	cd ..
+}
+
+function clear_arbo() {
+	rm -r "D_EXO_6"
+}
+
+if [ "$1" = "a_clear" ]; then
+	clear_arbo
+elif [ $# -eq 0 ]; then
+	create_arbo
+	parcours_dir "D_EXO_6" 0
+else 
+	exit 1
+fi
